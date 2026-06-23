@@ -70,13 +70,18 @@ end
 ----------------------------------------------------------------------
 
 -- Fields that represent an additive bonus (N copies -> value x N).
+-- Includes the vanilla "_mod" keys (mult_mod / chip_mod), which most
+-- built-in Jokers actually return (e.g. Green Joker uses mult_mod).
 local RJ_ADD_KEYS = {
-    'mult', 'h_mult', 'chips', 'h_chips',
-    'dollars', 'p_dollars', 'repetitions',
+    'mult', 'h_mult', 'mult_mod',
+    'chips', 'h_chips', 'chip_mod',
+    'dollars', 'p_dollars', 'h_dollars',
+    'repetitions',
 }
 -- Fields that represent a multiplier (N copies -> value ^ N).
 local RJ_MUL_KEYS = {
-    'x_mult', 'Xmult', 'xmult', 'x_chips', 'h_x_mult',
+    'x_mult', 'Xmult', 'xmult', 'x_mult_mod', 'Xmult_mod',
+    'x_chips', 'xchips', 'Xchip_mod', 'h_x_mult', 'h_x_chips',
 }
 
 local function rj_scale_effect(ret, n)
