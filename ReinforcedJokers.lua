@@ -124,6 +124,19 @@ function Card:calculate_joker(context)
     return o, t
 end
 
+-- End-of-round money (Golden Joker, Cloud 9, Rocket, Satellite) is paid
+-- through Card:calculate_dollar_bonus, which returns a bare number rather
+-- than a scalable effect table. Scale that by the stack too.
+local rj_orig_calc_dollar = Card.calculate_dollar_bonus
+function Card:calculate_dollar_bonus(...)
+    local r = rj_orig_calc_dollar(self, ...)
+    if rj_enabled() and type(r) == 'number' then
+        local n = rj_stack_of(self)
+        if n > 1 then return r * n end
+    end
+    return r
+end
+
 ----------------------------------------------------------------------
 -- 2b. Combine on pickup
 ----------------------------------------------------------------------
