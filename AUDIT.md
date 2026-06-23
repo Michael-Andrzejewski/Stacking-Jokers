@@ -29,8 +29,8 @@ The whole calculate is re-run N times for these pure side-effect jokers, so the 
 ## Fixed — slots / hands / discards (merge keeps the passive)
 On merge the absorbed duplicate's add_to_deck passive is kept (not undone on dissolve); the surviving stack undoes it N times when sold. Symmetric with vanilla remove_from_deck: Juggler, Drunkard, Merry Andy, Turtle Bean, Stuntman, To the Moon, Troubadour, Oops! All 6s.
 
-## Still partial — mixed self-scaling + destroy
-**Ceremonial Dagger, Madness.** Their scoring half scales correctly. Their joker-destruction side effect still fires once per blind (not N), because repeating it would also double-count their self-scaling counter. Left as-is intentionally.
+## Handled by design — mixed self-scaling + destroy
+**Ceremonial Dagger, Madness — work as intended.** Both destroy exactly one joker per blind (by design), but their accumulated scaling is multiplied by the stack. Ceremonial Dagger returns mult_mod = ability.mult, scaled x N (eat a $4 joker for +8, and a 2x dagger applies +16, a 3x +24). Madness returns Xmult_mod = ability.x_mult, scaled ^ N. The on-card number shows the base counter; the applied value is scaled.
 
 ## Approximate (expected value ~right, variance differs)
 Misprint, Business Card, Reserved Parking, Bloodstone, Gros Michel (extinction roll), 8 Ball, Space Joker, Hallucination.

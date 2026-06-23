@@ -101,11 +101,16 @@ end
 -- currently calculating and scale any ease_dollars it triggers. The
 -- save/restore makes this correct under nesting (e.g. Blueprint).
 local rj_current_stack = 1
+-- Track money eased during the current calculate so we can also fix the
+-- popup message, which some Jokers build from the un-scaled amount.
+local rj_ease_base, rj_ease_scaled = 0, 0
 
 local rj_orig_ease_dollars = ease_dollars
 function ease_dollars(amount, ...)
     if rj_enabled() and rj_current_stack > 1 and type(amount) == 'number' then
+        rj_ease_base = rj_ease_base + amount
         amount = amount * rj_current_stack
+        rj_ease_scaled = rj_ease_scaled + amount
     end
     return rj_orig_ease_dollars(amount, ...)
 end
@@ -152,9 +157,21 @@ function Card:calculate_joker(context)
 
     local prev = rj_current_stack
     rj_current_stack = n
+    rj_ease_base, rj_ease_scaled = 0, 0
     local o, t = rj_orig_calc_joker(self, context)
     rj_current_stack = prev
-    if n > 1 and type(o) == 'table' then rj_scale_effect(o, n) end
+    if n > 1 and type(o) == 'table' then
+        rj_scale_effect(o, n)
+        -- If the Joker paid via ease_dollars and built a "$<base>" popup
+        -- from the un-scaled amount (e.g. Mail-In Rebate), correct it to
+        -- the scaled payout so the popup matches the money received.
+        if rj_ease_base > 0 and type(o.message) == 'string' then
+            local dollar = localize('$')
+            if o.message == dollar .. tostring(rj_ease_base) then
+                o.message = dollar .. tostring(rj_ease_scaled)
+            end
+        end
+    end
     return o, t
 end
 
