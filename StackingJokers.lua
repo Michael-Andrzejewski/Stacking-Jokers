@@ -162,11 +162,25 @@ function Card:calculate_joker(context)
         return first_o, first_t
     end
 
+    -- Turtle Bean shrinks the hand by 1 each round from inside its
+    -- calculate. Its passive is applied N times (see 2b), so measure the
+    -- drop and apply it N - 1 more times to keep hand size = N x h_size.
+    local bean_before = nil
+    if n > 1 and key == 'j_turtle_bean' and type(self.ability.extra) == 'table' then
+        bean_before = self.ability.extra.h_size
+    end
+
     local prev = rj_current_stack
     rj_current_stack = n
     rj_ease_base, rj_ease_scaled = 0, 0
     local o, t = rj_orig_calc_joker(self, context)
     rj_current_stack = prev
+
+    if bean_before and type(self.ability.extra) == 'table' and G.hand then
+        local drop = bean_before - (self.ability.extra.h_size or bean_before)
+        if drop > 0 then G.hand:change_size(-drop * (n - 1)) end
+    end
+
     if n > 1 and type(o) == 'table' then
         rj_scale_effect(o, n)
         -- If the Joker paid via ease_dollars and built a "$<base>" popup
