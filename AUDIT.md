@@ -24,7 +24,7 @@ Mail-In Rebate, Delayed Gratification, Trading Card, Matador, To Do List (ease_d
 
 ## Fixed — side effects run N times (RJ_REPEAT list)
 The whole calculate is re-run N times for these pure side-effect jokers, so the side effect happens once per stack:
-- **Create cards:** Marble, 8 Ball, DNA, Sixth Sense, Superposition, Seance, Riff-raff, Vagabond, Hallucination, Certificate, Cartomancer, Perkeo, Invisible Joker (N copies on sale; its round counter still advances once per round).
+- **Create cards:** Marble, 8 Ball, DNA, Sixth Sense (the game flags the played 6 so a second copy would normally skip; the stack clears that flag between repeats and gives N spectrals, room permitting), Superposition, Seance, Riff-raff, Vagabond, Hallucination, Certificate, Cartomancer, Perkeo, Invisible Joker (N copies on sale; its round counter still advances once per round).
 - **Level a hand:** Space Joker, Burnt Joker.
 - **Edit cards:** Hiker (+perma chips ×N per card), Gift Card (sell value ×N), Midas Mask (idempotent).
 - **Tag / hands:** Diet Cola (N tags), Burglar (hands/discards ×N).

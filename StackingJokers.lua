@@ -196,8 +196,15 @@ function Card:calculate_joker(context)
         -- copies a Joker on sale. Copy N times; count each round once.
         local reps = n
         if key == 'j_invisible' and context and context.end_of_round then reps = 1 end
+        -- Sixth Sense marks the played 6 (card.sixth_sense) so it fires
+        -- once per card. Clear the mark between repeats so the stack gives
+        -- N spectrals, then leave it set so nothing else fires on it.
+        local six = (key == 'j_sixth_sense' and context and context.destroying_card
+                     and context.full_hand and context.full_hand[1]) or nil
+        local six_fired = false
         local first_o, first_t
         for i = 1, reps do
+            local six_had = six and six.sixth_sense
             local prev = rj_current_stack
             rj_current_stack = 1 -- side effects already repeat; don't also scale
             local o, t = rj_orig_calc_joker(self, context)
@@ -206,7 +213,12 @@ function Card:calculate_joker(context)
             -- A repeat that created a Joker (Invisible Joker's copy) must
             -- see it folded away before the next repeat checks for room.
             if rj_flush_merges then rj_flush_merges() end
+            if six and not six_had and six.sixth_sense then
+                six_fired = true
+                if i < reps then six.sixth_sense = nil end
+            end
         end
+        if six and six_fired then six.sixth_sense = true end
         return first_o, first_t
     end
 
