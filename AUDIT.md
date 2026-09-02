@@ -17,6 +17,7 @@ What it can NOT reach: a side effect that is neither money nor on the RJ_REPEAT 
 - **Self-scaling jokers** (Green Joker, Ride the Bus, Glass, Hologram, Obelisk, Vampire, Yorick, Caino, etc.) are **correct in total output** — the ^N/×N scaling exactly compensates for the counter growing once per trigger. The only artifact is cosmetic: the number printed on the card shows one copy's growth, not the scaled value.
 - **Probabilistic jokers** work in expected value but with different variance (one scaled roll instead of N independent rolls).
 - **A stack sells once**, for one copy's sell value. Reinforcing is a money sink; you do not get N sell values back.
+- **Popup text is scaled too.** Vanilla jokers build their own "+15 Mult" text from the base value; the mod rewrites it to the applied value ("+30 Mult" for a 2x Gros Michel) when the message is exactly the base text. Custom messages ("Again!") are left alone.
 
 ## Fixed — money
 Mail-In Rebate, Delayed Gratification, Trading Card, Matador, To Do List (ease_dollars ×N); Golden Joker, Cloud 9, Rocket, Satellite (calculate_dollar_bonus ×N). Faceless Joker pays from inside a queued event, so it is on the repeat list instead (below).

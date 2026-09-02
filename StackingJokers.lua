@@ -86,13 +86,53 @@ local RJ_MUL_KEYS = {
     'x_chips', 'xchips', 'Xchip_mod', 'h_x_mult', 'h_x_chips',
 }
 
+-- Vanilla Jokers build their popup text themselves from the base value
+-- ("+15 Mult"), so after scaling the number on screen would not match
+-- the number applied. When the message is exactly the base text, rebuild
+-- it from the scaled value.
+local RJ_MSG_KEYS = {
+    mult = 'a_mult', mult_mod = 'a_mult', h_mult = 'a_mult',
+    chips = 'a_chips', chip_mod = 'a_chips', h_chips = 'a_chips',
+    x_mult = 'a_xmult', Xmult = 'a_xmult', xmult = 'a_xmult',
+    x_mult_mod = 'a_xmult', Xmult_mod = 'a_xmult', h_x_mult = 'a_xmult',
+    x_chips = 'a_xchips', xchips = 'a_xchips', Xchip_mod = 'a_xchips', h_x_chips = 'a_xchips',
+    dollars = '$', p_dollars = '$', h_dollars = '$',
+}
+
+local function rj_scale_message(ret, key, base, scaled)
+    if type(ret.message) ~= 'string' then return end
+    local loc = RJ_MSG_KEYS[key]
+    if not loc then return end
+    -- keep whole numbers whole ("X8", not "X8.0")
+    if base == math.floor(base) then base = math.floor(base) end
+    if scaled == math.floor(scaled) then scaled = math.floor(scaled) end
+    local ok, base_msg, new_msg = pcall(function()
+        if loc == '$' then
+            return localize('$') .. tostring(base), localize('$') .. tostring(scaled)
+        end
+        return localize({ type = 'variable', key = loc, vars = { base } }),
+               localize({ type = 'variable', key = loc, vars = { scaled } })
+    end)
+    if ok and type(base_msg) == 'string' and ret.message == base_msg then
+        ret.message = new_msg
+    end
+end
+
 local function rj_scale_effect(ret, n)
     if type(ret) ~= 'table' or n <= 1 then return ret end
     for _, k in ipairs(RJ_ADD_KEYS) do
-        if type(ret[k]) == 'number' then ret[k] = ret[k] * n end
+        if type(ret[k]) == 'number' then
+            local base = ret[k]
+            ret[k] = base * n
+            rj_scale_message(ret, k, base, ret[k])
+        end
     end
     for _, k in ipairs(RJ_MUL_KEYS) do
-        if type(ret[k]) == 'number' and ret[k] ~= 1 then ret[k] = ret[k] ^ n end
+        if type(ret[k]) == 'number' and ret[k] ~= 1 then
+            local base = ret[k]
+            ret[k] = base ^ n
+            rj_scale_message(ret, k, base, ret[k])
+        end
     end
     return ret
 end
