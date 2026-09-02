@@ -27,6 +27,17 @@ cd %AppData%\Balatro\Mods
 git clone https://github.com/Michael-Andrzejewski/Stacking-Jokers.git StackingJokers
 ```
 
+## Debug hotkeys
+
+The stacking rules for passives, debuffs, and copies rarely come up in normal play. Turn on **Debug hotkeys** in the mod config, start a run, and use:
+
+- **F6** gives the test set (2x Juggler, 2x Turtle Bean, 2x Faceless Joker, 2x Invisible Joker, 3x Photograph) and $100.
+- **F7** debuffs every Joker you own, or restores them. This is what Crimson Heart does to one Joker per hand. Hand size, discards, and interest should return to the same numbers after a debuff and restore.
+- **F8** puts a duplicate of your first Joker into the open booster pack, or into the shop, so you can test "Reinforce" at full slots.
+- **F9** shows one line of state on screen and in the log: hand size, discards, interest, and each Joker's stack, rounds, or counter.
+
+While debug is on, every Joker tooltip also shows the current hand size, discards, and interest. The same actions are available as Lua functions for a console or bot bridge: `StackingJokers.give()`, `StackingJokers.debuff()`, `StackingJokers.spawn_dup()`, `StackingJokers.state()`.
+
 ## Known limitations
 
 - **A stack sells once**, for one copy's sell value. Reinforcing is a money sink.

@@ -33,6 +33,7 @@ local rj_defaults = {
     enabled            = true,
     always_showman     = true,
     combine_and_stack  = true,
+    debug              = false, -- F6-F9 test hotkeys, see section 4
 }
 
 if rj_mod then
@@ -449,7 +450,147 @@ function generate_card_ui(...)
             })
         end)
     end
+    -- Debug: show the run state the passive hooks change, so a stacked
+    -- Juggler or Turtle Bean can be checked without counting cards.
+    if rj_cfg().debug and G.GAME and G.hand and G.hand.config then
+        pcall(function()
+            table.insert(result.main, {
+                { n = G.UIT.T, config = {
+                    text = 'hand ' .. tostring(G.hand.config.card_limit)
+                        .. '  discards ' .. tostring(G.GAME.round_resets and G.GAME.round_resets.discards)
+                        .. '  interest ' .. tostring(G.GAME.interest_amount),
+                    scale = 0.28,
+                    colour = G.C.UI.TEXT_INACTIVE,
+                } },
+            })
+        end)
+    end
     return result
+end
+
+----------------------------------------------------------------------
+-- 4. Debug tools (config "debug"; hotkeys F6-F9 during a run)
+--    The same functions are exposed as StackingJokers.* so a Lua
+--    console or bot bridge can drive them without the keyboard.
+----------------------------------------------------------------------
+
+StackingJokers = StackingJokers or {}
+
+local function rj_in_run()
+    return G and G.STAGE == G.STAGES.RUN and G.jokers and G.jokers.cards and true or false
+end
+
+local function rj_pack_open()
+    if not (G.pack_cards and G.pack_cards.cards) then return false end
+    local S = G.STATES
+    return G.STATE == S.SMODS_BOOSTER_OPENED or G.STATE == S.TAROT_PACK
+        or G.STATE == S.PLANET_PACK or G.STATE == S.SPECTRAL_PACK
+        or G.STATE == S.STANDARD_PACK or G.STATE == S.BUFFOON_PACK
+end
+
+local function rj_notify(text)
+    if sendInfoMessage then sendInfoMessage(text, 'StackingJokers') end
+    if attention_text and G.jokers then
+        pcall(attention_text, {
+            text = text, scale = 0.45, hold = 4, major = G.jokers,
+            align = 'tm', offset = { x = 0, y = -0.6 }, backdrop_colour = G.C.BLACK,
+        })
+    end
+end
+
+-- The rare cases the stacking hooks handle, one stacked copy of each.
+StackingJokers.test_set = {
+    { key = 'j_juggler',     n = 2 }, -- passive: +1 hand size per copy
+    { key = 'j_turtle_bean', n = 2 }, -- passive that shrinks each round
+    { key = 'j_faceless',    n = 2 }, -- money paid from a queued event
+    { key = 'j_invisible',   n = 2 }, -- round counter, copies on sale
+    { key = 'j_photograph',  n = 3 }, -- plain X-mult scaling
+}
+
+-- F6: give the test set (or a list of {key=, n=}) plus $100.
+function StackingJokers.give(list)
+    if not rj_in_run() then return 'not in a run' end
+    for _, spec in ipairs(list or StackingJokers.test_set) do
+        if G.P_CENTERS[spec.key] then
+            local card = create_card('Joker', G.jokers, nil, nil, nil, nil, spec.key, 'sjdbg')
+            card.ability.rj_stack = spec.n or 1
+            card:add_to_deck()
+            G.jokers:emplace(card)
+        end
+    end
+    ease_dollars(100, true)
+    rj_notify('Stacking Jokers: test set given')
+    return true
+end
+
+-- F7: debuff every owned Joker, or restore them (what Crimson Heart
+-- does to one Joker per hand). Toggles when called with no argument.
+function StackingJokers.debuff(flag)
+    if not rj_in_run() then return 'not in a run' end
+    if flag == nil then
+        flag = not (G.jokers.cards[1] and G.jokers.cards[1].debuff)
+    end
+    for _, card in ipairs(G.jokers.cards) do card:set_debuff(flag) end
+    rj_notify('Stacking Jokers: jokers ' .. (flag and 'debuffed' or 'restored'))
+    return flag
+end
+
+-- F8: put a duplicate of an owned Joker (the first one, or `key`) into
+-- the open booster pack, or else into the shop, to test "Reinforce".
+function StackingJokers.spawn_dup(key)
+    if not rj_in_run() then return 'not in a run' end
+    key = key or (G.jokers.cards[1] and G.jokers.cards[1].config.center_key)
+    if not key then return 'no Joker to duplicate' end
+    if rj_pack_open() then
+        local card = create_card('Joker', G.pack_cards, nil, nil, nil, nil, key, 'sjdbg')
+        G.pack_cards:emplace(card)
+        rj_notify('Stacking Jokers: ' .. key .. ' added to the pack')
+        return 'pack'
+    elseif G.STATE == G.STATES.SHOP and G.shop_jokers and G.shop_jokers.cards then
+        local card = create_card('Joker', G.shop_jokers, nil, nil, nil, nil, key, 'sjdbg')
+        create_shop_card_ui(card, 'Joker', G.shop_jokers)
+        G.shop_jokers:emplace(card)
+        rj_notify('Stacking Jokers: ' .. key .. ' added to the shop')
+        return 'shop'
+    end
+    return 'open a pack or the shop first'
+end
+
+-- F9: one line of the state the hooks change, on screen and in the log.
+function StackingJokers.state()
+    if not rj_in_run() then return 'not in a run' end
+    local parts = {
+        'hand ' .. tostring(G.hand and G.hand.config.card_limit),
+        'discards ' .. tostring(G.GAME.round_resets and G.GAME.round_resets.discards),
+        'interest ' .. tostring(G.GAME.interest_amount),
+        'jokers ' .. #G.jokers.cards .. '/' .. tostring(G.jokers.config.card_limit),
+    }
+    for _, card in ipairs(G.jokers.cards) do
+        local s = tostring(card.config.center_key) .. ' x' .. rj_stack_of(card)
+        if card.debuff then s = s .. ' debuffed' end
+        if card.ability.invis_rounds then s = s .. ' rounds ' .. tostring(card.ability.invis_rounds) end
+        if card.config.center_key == 'j_turtle_bean' and type(card.ability.extra) == 'table' then
+            s = s .. ' h_size ' .. tostring(card.ability.extra.h_size)
+        end
+        parts[#parts + 1] = s
+    end
+    local text = table.concat(parts, ' | ')
+    rj_notify(text)
+    return text
+end
+
+if SMODS.Keybind then
+    local function rj_bind(key, fn)
+        SMODS.Keybind({
+            key_pressed = key,
+            event = 'pressed',
+            action = function() if rj_cfg().debug then fn() end end,
+        })
+    end
+    rj_bind('f6', function() StackingJokers.give() end)
+    rj_bind('f7', function() StackingJokers.debuff() end)
+    rj_bind('f8', function() StackingJokers.spawn_dup() end)
+    rj_bind('f9', function() StackingJokers.state() end)
 end
 
 ----------------------------------------------------------------------
@@ -471,6 +612,7 @@ if rj_mod then
                 toggle('Enable Stacking Jokers', 'enabled'),
                 toggle('Always-on Showman', 'always_showman'),
                 toggle('Combine + stack duplicate Jokers', 'combine_and_stack'),
+                toggle('Debug hotkeys F6-F9 (see README)', 'debug'),
             },
         }
     end
