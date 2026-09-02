@@ -16,6 +16,10 @@ Built on commission for [Bean](https://www.youtube.com/@BeanBalatro).
 
 All behaviours can be toggled in the mod config.
 
+## Owned Jokers also appear as Common
+
+Off by default. Common Jokers stack much more than Rares only because the shop rolls them far more often. With this on, every Joker you own is also added to the **Common** pool, so once you have a Baron, further Barons show up about as often as a second Joker would. The card keeps its real rarity badge and price; only how often it is rolled changes. It applies to the shop, Buffoon packs, and Judgement.
+
 ## Requirements
 
 - [Lovely](https://github.com/ethangreen-dev/lovely-injector) and [Steamodded](https://github.com/Steamodded/smods) (1.0.0-beta or newer).

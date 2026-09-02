@@ -33,6 +33,7 @@ local rj_defaults = {
     enabled            = true,
     always_showman     = true,
     combine_and_stack  = true,
+    owned_common       = false, -- owned Jokers also roll at Common rarity, see section 5
     debug              = false, -- F6-F9 test hotkeys, see section 4
 }
 
@@ -674,6 +675,39 @@ if SMODS.Keybind then
 end
 
 ----------------------------------------------------------------------
+-- 5. Owned Jokers also appear as Common (config "owned_common")
+--    Common Jokers reinforce far more often than Rares simply because
+--    they are rolled more often. With this on, every Joker you own is
+--    added to the Common pool as well, so a second Baron shows up about
+--    as often as a second Joker would. The card itself keeps its real
+--    rarity badge and price; only how often it is rolled changes.
+----------------------------------------------------------------------
+
+-- The shop, packs and Judgement all pick Jokers through get_current_pool:
+-- a rarity is rolled, then a key is drawn from that rarity's pool. The
+-- pool key names the rarity ("Joker1" + append is the Common pool).
+local rj_orig_get_current_pool = get_current_pool
+function get_current_pool(_type, _rarity, _legendary, _append)
+    local pool, pool_key = rj_orig_get_current_pool(_type, _rarity, _legendary, _append)
+    if rj_enabled() and rj_cfg().owned_common and _type == 'Joker' and not _legendary
+       and type(pool) == 'table' and type(pool_key) == 'string' and pool_key:sub(1, 6) == 'Joker1'
+       and G.jokers and G.jokers.cards then
+        local present = {}
+        for _, k in ipairs(pool) do present[k] = true end
+        local banned = (G.GAME and G.GAME.banned_keys) or {}
+        for _, j in ipairs(G.jokers.cards) do
+            local c = j.config and j.config.center
+            local key = c and c.key
+            if key and c.rarity ~= 1 and not present[key] and not banned[key] and c.unlocked ~= false then
+                pool[#pool + 1] = key
+                present[key] = true
+            end
+        end
+    end
+    return pool, pool_key
+end
+
+----------------------------------------------------------------------
 -- Mod config tab
 ----------------------------------------------------------------------
 
@@ -692,6 +726,7 @@ if rj_mod then
                 toggle('Enable Stacking Jokers', 'enabled'),
                 toggle('Always-on Showman', 'always_showman'),
                 toggle('Combine + stack duplicate Jokers', 'combine_and_stack'),
+                toggle('Owned Jokers also appear as Common', 'owned_common'),
                 toggle('Debug hotkeys F6-F9 (see README)', 'debug'),
             },
         }
