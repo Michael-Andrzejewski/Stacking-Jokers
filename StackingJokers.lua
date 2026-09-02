@@ -338,33 +338,70 @@ G.FUNCS.check_for_buy_space = function(card)
     return rj_orig_check_space(card)
 end
 
--- Swap a buy button's text. The text node is the button root's first
--- child; clearing text_drawable forces it to rebuild on the next update.
-local function rj_set_buy_label(e, label, scale)
-    local t = e.children and e.children[1]
-    if t and t.config and t.config.text ~= label then
+-- Find the text node inside a button. The pack Select button holds it
+-- as a direct child; the shop Buy button nests it a few rows deep.
+local function rj_find_text_node(e, depth)
+    depth = depth or 0
+    if not e or depth > 6 then return nil end
+    if e.config and type(e.config.text) == 'string' then return e end
+    for _, child in ipairs(e.children or {}) do
+        local t = rj_find_text_node(child, depth + 1)
+        if t then return t end
+    end
+    return nil
+end
+
+-- Swap a button's label between its original text and "Reinforce".
+-- Clearing text_drawable forces the text to rebuild on the next draw.
+local function rj_set_button_label(e, reinforcing)
+    local t = rj_find_text_node(e)
+    if not t then return end
+    if t.config.rj_orig_text == nil then
+        t.config.rj_orig_text = t.config.text
+        t.config.rj_orig_scale = t.config.scale or 0.5
+    end
+    local label = reinforcing and 'Reinforce' or t.config.rj_orig_text
+    local scale = reinforcing and (t.config.rj_orig_scale * 0.76) or t.config.rj_orig_scale
+    if t.config.text ~= label then
         t.config.text = label
-        if scale then t.config.scale = scale end
+        t.config.scale = scale
         t.config.text_drawable = nil
         if t.UIBox then t.UIBox:recalculate() end
     end
 end
 
--- can_buy runs on the buy button every frame. After the stock cost
+-- True when the button's card would fold into a Joker we already own.
+local function rj_would_reinforce(e)
+    local card = e and e.config and e.config.ref_table
+    if card and card.ability and card.ability.set == 'Joker' and rj_find_match(card) then
+        return true
+    end
+    return false
+end
+
+-- can_buy runs on the shop buy button every frame. After the stock cost
 -- check, relabel to "Reinforce" when the card would fold into an owned
--- Joker, and restore "Buy" otherwise.
+-- Joker, and restore the original label otherwise.
 local rj_orig_can_buy = G.FUNCS.can_buy
 G.FUNCS.can_buy = function(e)
     rj_orig_can_buy(e)
     if not (rj_enabled() and rj_cfg().combine_and_stack) then return end
-    local card = e.config and e.config.ref_table
-    local reinforcing = card and card.ability and card.ability.set == 'Joker'
-                        and rj_find_match(card)
+    rj_set_button_label(e, rj_would_reinforce(e))
+end
+
+-- can_select_card gates the Select button on booster pack cards with its
+-- own slot check (it does not go through check_for_buy_space). Enable it
+-- for a duplicate at full slots, and relabel it the same way.
+local rj_orig_can_select_card = G.FUNCS.can_select_card
+G.FUNCS.can_select_card = function(e)
+    rj_orig_can_select_card(e)
+    if not (rj_enabled() and rj_cfg().combine_and_stack) then return end
+    local reinforcing = rj_would_reinforce(e)
     if reinforcing then
-        rj_set_buy_label(e, 'Reinforce', 0.38)
-    else
-        rj_set_buy_label(e, localize('b_buy'), 0.5)
+        e.config.colour = G.C.GREEN
+        e.config.button = 'use_card'
     end
+    rj_set_button_label(e, reinforcing)
 end
 
 ----------------------------------------------------------------------
