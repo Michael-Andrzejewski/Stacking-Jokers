@@ -213,6 +213,18 @@ end
 -- 2b. Combine on pickup
 ----------------------------------------------------------------------
 
+-- Ankh and Invisible Joker copy a Joker with copy_card, which copies the
+-- whole ability table, stack count included. A copy is one new Joker,
+-- so it starts at stack 1 (it then folds into the original: N + 1).
+local rj_orig_copy_card = copy_card
+function copy_card(...)
+    local c = rj_orig_copy_card(...)
+    if c and c.ability and c.ability.rj_stack then
+        c.ability.rj_stack = 1
+    end
+    return c
+end
+
 -- Find an owned Joker of the same type as `card` (excluding `card`
 -- itself). Used both to fold a freshly bought duplicate into an existing
 -- copy and to detect, in the shop, that a Joker would reinforce.
