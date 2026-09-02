@@ -207,6 +207,25 @@ local function rj_find_match(card)
     return nil
 end
 
+-- Passives (hand size, discards, interest, probabilities, etc.) are
+-- applied in Card:add_to_deck and undone in Card:remove_from_deck. A
+-- stack of N keeps its passive applied N times while it is in play and
+-- undoes it N times when it leaves (sold, destroyed, debuffed). Both
+-- directions scale, so a debuff / un-debuff cycle stays balanced.
+local rj_orig_add_to_deck = Card.add_to_deck
+local rj_orig_remove_from_deck = Card.remove_from_deck
+
+-- Apply (add = true) or undo one extra copy of a Joker's passive.
+-- from_debuff = true skips the one-time bookkeeping (card_added context).
+local function rj_passive(card, add)
+    card.added_to_deck = not add
+    if add then
+        rj_orig_add_to_deck(card, true)
+    else
+        rj_orig_remove_from_deck(card, true)
+    end
+end
+
 -- Fold `card` into an existing copy if one exists.
 local function rj_try_merge(card)
     if not rj_enabled() or not rj_cfg().combine_and_stack then return end
@@ -215,27 +234,36 @@ local function rj_try_merge(card)
     local target = rj_find_match(card)
     if not target then return end
 
-    target.ability.rj_stack = rj_stack_of(target) + rj_stack_of(card)
+    local k = rj_stack_of(card)
+    target.ability.rj_stack = rj_stack_of(target) + k
+
+    -- Move the incoming copy's passive onto the stack: undo it on the
+    -- duplicate (k times, through the hook below), then apply it k more
+    -- times on the kept card if that card is currently in play.
+    card:remove_from_deck()
+    if target.added_to_deck then
+        for _ = 1, k do rj_passive(target, true) end
+    end
     if target.juice_up then target:juice_up(0.5, 0.5) end
 
     -- Remove the incoming duplicate (animated, like a destroyed Joker).
-    -- rj_absorbed tells remove_from_deck NOT to undo this card's passive
-    -- (hand size, discards, interest, etc.) -- it stays applied so the
-    -- stack keeps N copies' worth. remove_from_deck undoes it N times
-    -- when the surviving stack is eventually sold.
     card.getting_sliced = true
-    card.rj_absorbed = true
     pcall(function() card:start_dissolve() end)
 end
 
--- Hook add_to_deck so a freshly acquired Joker schedules a merge check
--- AFTER the acquisition flow finishes (avoids touching the card while
--- the buy/open code still references it).
-local rj_orig_add_to_deck = Card.add_to_deck
+-- Hook add_to_deck: apply the passive N times for a stack, then schedule
+-- a merge check AFTER the acquisition flow finishes (avoids touching the
+-- card while the buy/open code still references it).
 function Card:add_to_deck(from_debuff)
+    local was_added = self.added_to_deck
     local res = rj_orig_add_to_deck(self, from_debuff)
-    if rj_enabled() and rj_cfg().combine_and_stack
-       and self.ability and self.ability.set == 'Joker' then
+    if not (self.ability and self.ability.set == 'Joker') then return res end
+
+    if not was_added and self.added_to_deck then
+        for _ = 2, rj_stack_of(self) do rj_passive(self, true) end
+    end
+
+    if rj_enabled() and rj_cfg().combine_and_stack and not from_debuff then
         local card = self
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
@@ -249,26 +277,13 @@ function Card:add_to_deck(from_debuff)
     return res
 end
 
--- Balance the passive (hand size / discards / interest / etc.) for stacks.
--- Each copy applied its passive once via add_to_deck. An absorbed
--- duplicate keeps its passive (we skip its removal); the surviving stack
--- of N undoes the passive N times when it leaves play (sold/destroyed).
-local rj_orig_remove_from_deck = Card.remove_from_deck
+-- Hook remove_from_deck: undo the passive N times for a stack.
 function Card:remove_from_deck(from_debuff)
-    if self.rj_absorbed then
-        -- This duplicate was merged; its passive now belongs to the stack.
-        self.added_to_deck = false
-        return
-    end
-    if rj_enabled() and self.ability and self.ability.set == 'Joker' then
+    if self.added_to_deck and self.ability and self.ability.set == 'Joker' then
         local n = rj_stack_of(self)
-        if n > 1 then
-            for _ = 1, n do
-                self.added_to_deck = true
-                rj_orig_remove_from_deck(self, from_debuff)
-            end
-            return
-        end
+        local res = rj_orig_remove_from_deck(self, from_debuff)
+        for _ = 2, n do rj_passive(self, false) end
+        return res
     end
     return rj_orig_remove_from_deck(self, from_debuff)
 end
