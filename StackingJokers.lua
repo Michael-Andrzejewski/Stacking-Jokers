@@ -580,8 +580,15 @@ end
 -- F9: one line of the state the hooks change, on screen and in the log.
 function StackingJokers.state()
     if not rj_in_run() then return 'not in a run' end
+    -- Steamodded recomputes card_limit on the next frame; sum its parts
+    -- so the line is current right after a change.
+    local hand = G.hand and G.hand.config.card_limit
+    local cl = G.hand and G.hand.config.card_limits
+    if type(cl) == 'table' and cl.base then
+        hand = cl.base + (cl.mod or 0) + (cl.extra_slots or 0) - (cl.extra_slots_used or 0)
+    end
     local parts = {
-        'hand ' .. tostring(G.hand and G.hand.config.card_limit),
+        'hand ' .. tostring(hand),
         'discards ' .. tostring(G.GAME.round_resets and G.GAME.round_resets.discards),
         'interest ' .. tostring(G.GAME.interest_amount),
         'jokers ' .. #G.jokers.cards .. '/' .. tostring(G.jokers.config.card_limit),
