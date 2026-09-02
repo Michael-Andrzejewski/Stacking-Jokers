@@ -139,6 +139,9 @@ local RJ_REPEAT = {
     j_faceless = true,
 }
 
+-- Defined in 2b: fold any duplicate now sitting in the Joker area.
+local rj_flush_merges
+
 -- Card:calculate_joker returns the Joker's effect table (o) plus an
 -- optional trigger flag (t). For RJ_REPEAT Jokers we re-run N times;
 -- otherwise we scale the returned effect by the stack and expose the
@@ -160,6 +163,9 @@ function Card:calculate_joker(context)
             local o, t = rj_orig_calc_joker(self, context)
             rj_current_stack = prev
             if i == 1 then first_o, first_t = o, t end
+            -- A repeat that created a Joker (Invisible Joker's copy) must
+            -- see it folded away before the next repeat checks for room.
+            if rj_flush_merges then rj_flush_merges() end
         end
         return first_o, first_t
     end
@@ -282,8 +288,23 @@ local function rj_try_merge(card)
     if target.juice_up then target:juice_up(0.5, 0.5) end
 
     -- Remove the incoming duplicate (animated, like a destroyed Joker).
+    -- Leave the Joker area right away so slot counts are correct before
+    -- the dissolve finishes (Card:remove handles a card with no area).
     card.getting_sliced = true
+    if card.area and card.area.remove_card then card.area:remove_card(card) end
     pcall(function() card:start_dissolve() end)
+end
+
+-- Fold every duplicate currently in the Joker area, newest into oldest.
+-- Used between repeats of a side-effect Joker that creates Jokers.
+rj_flush_merges = function()
+    if not (G.jokers and G.jokers.cards) then return end
+    for i = #G.jokers.cards, 1, -1 do
+        local j = G.jokers.cards[i]
+        if j and not j.getting_sliced and rj_find_match(j) then
+            pcall(function() rj_try_merge(j) end)
+        end
+    end
 end
 
 -- Hook add_to_deck: apply the passive N times for a stack, then schedule
