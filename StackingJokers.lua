@@ -147,8 +147,12 @@ function Card:calculate_joker(context)
     local key = self.config and self.config.center_key
 
     if n > 1 and key and RJ_REPEAT[key] then
+        -- Invisible Joker counts rounds in the same calculate that
+        -- copies a Joker on sale. Copy N times; count each round once.
+        local reps = n
+        if key == 'j_invisible' and context and context.end_of_round then reps = 1 end
         local first_o, first_t
-        for i = 1, n do
+        for i = 1, reps do
             local prev = rj_current_stack
             rj_current_stack = 1 -- side effects already repeat; don't also scale
             local o, t = rj_orig_calc_joker(self, context)
