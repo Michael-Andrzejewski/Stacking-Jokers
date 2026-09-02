@@ -9,9 +9,9 @@ Built on commission for [Bean](https://www.youtube.com/@BeanBalatro).
 ## How it works
 
 - **Always-on Showman:** duplicates always show up in the shop and packs.
-- **Combine on pickup:** acquiring a Joker you already own removes the new card and increments a stack count on the existing one (with a little juice for feedback). A duplicate can be bought even at full slots; the button reads "Reinforce".
+- **Combine on pickup:** acquiring a Joker you already own removes the new card and increments a stack count on the existing one (with a little juice for feedback). A duplicate can be bought, or picked from a Buffoon pack, even at full slots; the button reads "Reinforce".
 - **Stacking = effect x stack:** when a stacked Joker scores, its effect is scaled by the stack. Additive fields (mult, chips, money, retriggers) multiply by N; multiplier fields (x_mult, x_chips) raise to the power N. So 3x Photograph is X2^3 = **X8**, and 2x Chad retriggers 2 x 2 = **4** times.
-- **Side-effect Jokers** (create cards, level hands, change hands/discards, etc.) repeat their effect N times. **Money** Jokers pay N times. See [AUDIT.md](AUDIT.md) for the full per-Joker breakdown.
+- **Side-effect Jokers** (create cards, level hands, change hands/discards, etc.) repeat their effect N times. **Money** Jokers pay N times. **Passive** Jokers (hand size, discards, interest, probabilities) count N times and stay balanced through boss-blind debuffs. See [AUDIT.md](AUDIT.md) for the full per-Joker breakdown.
 - The stack count shows on the Joker's tooltip as "Reinforced xN".
 
 All behaviours can be toggled in the mod config.
@@ -29,6 +29,8 @@ git clone https://github.com/Michael-Andrzejewski/Stacking-Jokers.git StackingJo
 
 ## Known limitations
 
+- **A stack sells once**, for one copy's sell value. Reinforcing is a money sink.
+- **Ankh and Invisible Joker** copy one Joker, not the whole stack; the copy folds back in, so a stack of N becomes N + 1.
 - **Ceremonial Dagger / Madness** destroy one Joker per blind by design; their accumulated mult / x_mult scales with the stack.
 - **Probabilistic Jokers** (Misprint, Business Card, Bloodstone, etc.) match in expected value but with different variance than N separate copies.
 - The incoming duplicate's edition and eternal/perishable/rental stickers are dropped; the kept copy wins. Combining is by Joker type, ignoring edition.

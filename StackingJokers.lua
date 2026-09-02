@@ -14,12 +14,13 @@
   fields ^ N, repetitions x N). This matches "N copies of the Joker" for
   the large majority of Jokers (mult, chips, x_mult, money, retriggers).
 
-  Known v1 limits (Bean: scope to the common cases):
-    * One-time / create-card / self-scaling Jokers run their side effect
-      once per pickup, not once per stack.
+  Known limits (Bean: scope to the common cases):
     * Editions and eternal/perishable/rental of the *incoming* duplicate
       are dropped; the kept copy's stickers/edition win.
     * Combining is by Joker type (center key), ignoring edition.
+    * A stack sells once, for one copy's sell value.
+    * Self-scaling Jokers show one copy's counter on the card; the
+      applied value is scaled.
 --]]
 
 ----------------------------------------------------------------------
@@ -467,7 +468,7 @@ if rj_mod then
             n = G.UIT.ROOT,
             config = { align = 'cm', padding = 0.04, colour = G.C.CLEAR },
             nodes = {
-                toggle('Enable Reinforced Jokers', 'enabled'),
+                toggle('Enable Stacking Jokers', 'enabled'),
                 toggle('Always-on Showman', 'always_showman'),
                 toggle('Combine + stack duplicate Jokers', 'combine_and_stack'),
             },
