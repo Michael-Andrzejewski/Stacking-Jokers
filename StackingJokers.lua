@@ -132,6 +132,9 @@ local RJ_REPEAT = {
     j_hiker = true, j_gift = true, j_midas_mask = true,
     -- tag / hands
     j_diet_cola = true, j_burglar = true,
+    -- money paid from inside a queued event, where the ease_dollars
+    -- hook below cannot see it
+    j_faceless = true,
 }
 
 -- Card:calculate_joker returns the Joker's effect table (o) plus an
